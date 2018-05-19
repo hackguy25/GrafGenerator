@@ -4,7 +4,8 @@ import java.util.LinkedList;
 
 public class GrafGen {
 	
-	static class Pair <L, D> {
+	// Pomožni razredi
+	static class Pair <L extends Comparable<L>, D extends Comparable<D>> implements Comparable<Pair<L, D>> {
 		
 		L l;
 		D d;
@@ -20,8 +21,46 @@ public class GrafGen {
 			return l.toString() + " " + d.toString();
 		}
 		
+		public int compareTo(Pair<L, D> p) {
+			
+			// Leksikografska ureditev
+			int ret = l.compareTo(p.l);
+			
+			if (ret == 0)
+				ret = d.compareTo(p.d);
+			
+			return ret;
+		}
+		
 	}
 	
+	// Algoritmi za generiranje
+	private static void alg1 (int n, double p, ArrayList<Pair<Integer, Integer>> povezave) {
+		
+		// Privzeti algoritem, generira nepovezan graf
+		for (int i = 0; i < n; i++)
+			for (int j = i + 1; j < n; j++)
+				if (Math.random() < p)
+					povezave.add(new Pair<Integer, Integer>(i, j));
+	}
+	
+	private static void alg2 (int n, double p, ArrayList<Pair<Integer, Integer>> povezave) {
+		
+		// Alternativni algoritem, generira povezan graf
+		for (int i = 1; i < n; i++) {
+			
+			int prvaPovezava = (int) Math.floor(Math.random() * i);
+			povezave.add(new Pair<Integer, Integer>(prvaPovezava, i));
+			
+			double noviP = (i * p - 1) / i;
+			
+			for (int j = 0; j < i; j++)
+				if (j != prvaPovezava && Math.random() < noviP)
+					povezave.add(new Pair<Integer, Integer>(i, j));
+		}
+	}
+	
+	// Pomožne metode
 	@SuppressWarnings("unused")
 	private static double fact (long n) { // Trenutno se ne uporablja
 		
@@ -115,6 +154,7 @@ public class GrafGen {
 		extras.forEach(par -> p.add(par));
 	}
 	
+	// Main
 	public static void main (String [] args) {
 		
 		if (args.length < 1) {
@@ -136,20 +176,84 @@ public class GrafGen {
 			System.exit(-1);
 		}
 		
+		int currArg = 1;
+		
+		String algoritem = "default"; // Kateri algoritem uporabljamo za tvorjenje grafa
+		boolean moraBitiPovezan = true; // Ali mora tvorjeni graf biti povezan
+		boolean moraSortiratiPovezave = true; // Ali morajo biti povezave leksikografsko sortirane
+		int zelenoSteviloPovezav = 2 * n; // Želeno povprečno število povezav
+		
+		while (currArg < args.length) {
+			
+			// Beremo argumente, dane programu
+			switch (args[currArg]) {
+			
+			case "-a":
+			case "--algoritem":
+				if (currArg >= args.length - 1 || args[currArg + 1].charAt(0) == '-') {
+					System.err.println("Podati moraš želeno ime algoritma.");
+					System.exit(-1);
+				}
+				algoritem = args[currArg + 1];
+				currArg += 2;
+				break;
+				
+			case "-p":
+			case "--povezav":
+				if (currArg >= args.length - 1 || args[currArg + 1].charAt(0) == '-') {
+					System.err.println("Podati moraš želeno število povezav.");
+					System.exit(-1);
+				}
+				zelenoSteviloPovezav = Integer.parseInt(args[currArg + 1]);
+				currArg += 2;
+				break;
+				
+			case "-np":
+			case "--nepovezan":
+				moraBitiPovezan = false;
+				currArg++;
+				break;
+				
+			case "-ns":
+			case "--nesortiraj":
+				moraSortiratiPovezave = false;
+				currArg++;
+				break;
+				
+			default:
+				System.err.println("Neveljaven argument: " + args[currArg] + ".");
+				System.exit(-1);
+			}
+		}
+		
 		// Izračun verjetnosti, da ostane povezava v grafu
-		// Želim povprečno 2n povezav, kasneje bo to prilagodljivo
-		double p = 2 * 2 / (double) (n + 1);
+		double p = 2 * zelenoSteviloPovezav / (double) (n * (n + 1));
 		
 		ArrayList<Pair<Integer, Integer>> povezave = new ArrayList<Pair<Integer, Integer>>(); // Zdrava zabava, emajrajt
 		
-		// Vstavljanje
-		for (int i = 0; i < n; i++)
-			for (int j = i + 1; j < n; j++)
-				if (Math.random() < p)
-					povezave.add(new Pair<Integer, Integer>(i, j));
+		// Izbira algoritma
+		switch (algoritem) {
 		
-		// Povezovanje ločenih podmnožic grafa
-		povezi(povezave, n);
+		case "default":
+			alg1(n, p, povezave);
+			if (moraBitiPovezan)
+				povezi(povezave, n);
+			break;
+			
+		case "alt":
+			if (moraBitiPovezan = false)
+				System.err.println("Opozorilo: Alternativni algoritem vedno ustvari povezan graf.");
+			alg2(n, p, povezave);
+			break;
+			
+		default:
+			System.err.println("Neveljaven algoritem: " + algoritem + ".");
+			System.exit(-1);
+		}
+		
+		// Sortiranje povezav
+		if (moraSortiratiPovezave)
+			povezave.sort(null);
 		
 		// Izpis
 		System.out.println(n + " " + povezave.size());
